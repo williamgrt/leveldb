@@ -53,6 +53,10 @@ struct DBImpl::Writer {
 
 struct DBImpl::CompactionState {
   // Files produced by compaction
+  // 每个compaction的状态
+  // file_size：文件大小
+  // smallest：最小键
+  // largest：最大键
   struct Output {
     uint64_t number;
     uint64_t file_size;
@@ -1112,6 +1116,7 @@ int64_t DBImpl::TEST_MaxNextLevelOverlappingBytes() {
   return versions_->MaxNextLevelOverlappingBytes();
 }
 
+// 执行读操作的接口函数
 Status DBImpl::Get(const ReadOptions& options, const Slice& key,
                    std::string* value) {
   Status s;
@@ -1197,6 +1202,7 @@ Status DBImpl::Delete(const WriteOptions& options, const Slice& key) {
   return DB::Delete(options, key);
 }
 
+// 所有修改操作的入口
 Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
   Writer w(&mutex_);
   w.batch = updates;
@@ -1225,6 +1231,8 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
     // during this phase since &w is currently responsible for logging
     // and protects against concurrent loggers and concurrent writes
     // into mem_.
+    // 写入步骤：
+    // 
     {
       mutex_.Unlock();
       status = log_->AddRecord(WriteBatchInternal::Contents(write_batch));

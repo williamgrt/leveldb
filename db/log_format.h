@@ -10,11 +10,15 @@
 
 namespace leveldb {
 namespace log {
-
+// Record Header 格式
+// ----------------------------------------------------------
+// | checksum (4 bytes) ｜ length (2 bytes) ｜ type (1 byte) ｜
+// ----------------------------------------------------------
 enum RecordType {
   // Zero is reserved for preallocated files
   kZeroType = 0,
 
+  // kFullType 表示 Record 存储了完整的用户记录
   kFullType = 1,
 
   // For fragments
@@ -24,10 +28,12 @@ enum RecordType {
 };
 static const int kMaxRecordType = kLastType;
 
-static const int kBlockSize = 32768;
+// Log Block 大小为 32 KB
+static const int kBlockSize = 32768; 
 
 // Header is checksum (4 bytes), length (2 bytes), type (1 byte).
-static const int kHeaderSize = 4 + 2 + 1;
+// 每个 Record Header 大小 7 字节
+static const int kHeaderSize = 4 + 2 + 1; 
 
 }  // namespace log
 }  // namespace leveldb

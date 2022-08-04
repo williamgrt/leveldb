@@ -53,6 +53,7 @@ bool Reader::SkipToInitialBlock() {
   return true;
 }
 
+// 其他组件读取 wal 的接口函数
 bool Reader::ReadRecord(Slice* record, std::string* scratch) {
   if (last_record_offset_ < initial_offset_) {
     if (!SkipToInitialBlock()) {
@@ -186,8 +187,15 @@ void Reader::ReportDrop(uint64_t bytes, const Status& reason) {
   }
 }
 
+// 读 log record 的函数
+// 步骤如下：
+// 1. 判断剩余未读的 log block 大小，如果小于头部大小，并且没有读到文件的末尾，切换到下一个 log block
+// 2. 读取 record 头部，获取 record 大小，读取 record 内容
+// 3. crc 校验，验证内容是否出错
+// 4. 如果通过校验，读取固定长度的 record 内容
 unsigned int Reader::ReadPhysicalRecord(Slice* result) {
   while (true) {
+    // 如果剩余未读的 log block 小于头部大小，并且没有读到文件的末尾，切换到下一个 block
     if (buffer_.size() < kHeaderSize) {
       if (!eof_) {
         // Last read was a full read, so this is a trailer to skip
@@ -256,6 +264,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
       }
     }
 
+    // 丢弃到 buffer 中已经成功读取
     buffer_.remove_prefix(kHeaderSize + length);
 
     // Skip physical record that started before initial_offset_

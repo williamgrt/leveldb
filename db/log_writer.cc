@@ -31,6 +31,7 @@ Writer::Writer(WritableFile* dest, uint64_t dest_length)
 
 Writer::~Writer() = default;
 
+// 其他组件写 wal 的接口函数
 Status Writer::AddRecord(const Slice& slice) {
   const char* ptr = slice.data();
   size_t left = slice.size();
@@ -43,6 +44,8 @@ Status Writer::AddRecord(const Slice& slice) {
   do {
     const int leftover = kBlockSize - block_offset_;
     assert(leftover >= 0);
+    // 检查 log block 剩余大小
+    // 如果剩余大小小于 7 个字节，用 0 填充剩余部分并开启一个新的 block
     if (leftover < kHeaderSize) {
       // Switch to a new block
       if (leftover > 0) {
@@ -79,18 +82,24 @@ Status Writer::AddRecord(const Slice& slice) {
   return s;
 }
 
+// wal 实际的写入函数
+// 步骤如下：
+// 1. 确定 record 的大小、类型、crc 校验码
+// 2. 写入 record 元数据信息以及内容
 Status Writer::EmitPhysicalRecord(RecordType t, const char* ptr,
                                   size_t length) {
   assert(length <= 0xffff);  // Must fit in two bytes
   assert(block_offset_ + kHeaderSize + length <= kBlockSize);
 
   // Format the header
+  // 后面 3 个字节是 Record 大小和类型
   char buf[kHeaderSize];
   buf[4] = static_cast<char>(length & 0xff);
   buf[5] = static_cast<char>(length >> 8);
   buf[6] = static_cast<char>(t);
 
   // Compute the crc of the record type and the payload.
+  // 计算 CRC 校验码，写入前 4 个字节
   uint32_t crc = crc32c::Extend(type_crc_[t], ptr, length);
   crc = crc32c::Mask(crc);  // Adjust for storage
   EncodeFixed32(buf, crc);
